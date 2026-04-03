@@ -45,6 +45,7 @@ export function registerRefreshCache(server: McpServer): void {
                   text: `Error: 未找到服务 "${params.source}"，请用 swagger_list_sources 查看可用服务名。`,
                 },
               ],
+              isError: true,
             };
           }
           const total = src.data.modules.reduce(
@@ -82,6 +83,7 @@ export function registerRefreshCache(server: McpServer): void {
               text: `Error: ${err instanceof Error ? err.message : String(err)}`,
             },
           ],
+          isError: true,
         };
       }
     }

@@ -73,6 +73,7 @@ export function registerListSources(server: McpServer): void {
               text: `Error: ${err instanceof Error ? err.message : String(err)}`,
             },
           ],
+          isError: true,
         };
       }
     }

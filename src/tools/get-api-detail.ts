@@ -96,6 +96,7 @@ export function registerGetApiDetail(server: McpServer): void {
                 text: `Error: 未找到接口 ${params.method} ${params.path}（服务: ${params.source}）。\n\n提示：请用 swagger_search_api 先搜索接口，确认正确的路径和方法。`,
               },
             ],
+            isError: true,
           };
         }
 
@@ -163,6 +164,7 @@ export function registerGetApiDetail(server: McpServer): void {
               text: `Error: ${err instanceof Error ? err.message : String(err)}`,
             },
           ],
+          isError: true,
         };
       }
     }

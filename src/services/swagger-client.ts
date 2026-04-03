@@ -1,4 +1,3 @@
-import axios, { AxiosError } from "axios";
 import { readFileSync } from "fs";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
@@ -57,20 +56,25 @@ export function parseWebUrl(webUrl: string): string {
 async function fetchSource(src: SwaggerSourceConfig): Promise<CachedSource> {
   const apiUrl = parseWebUrl(src.webUrl);
 
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
   let response: ApiResponse;
   try {
-    const res = await axios.get<ApiResponse>(apiUrl, {
+    const res = await fetch(apiUrl, {
       headers: FIXED_HEADERS,
-      timeout: REQUEST_TIMEOUT_MS,
-      httpsAgent: undefined,
+      signal: controller.signal,
     });
-    response = res.data;
+    clearTimeout(timeoutId);
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status} fetching swagger for "${src.webUrl}"`);
+    }
+    response = (await res.json()) as ApiResponse;
   } catch (err) {
-    if (err instanceof AxiosError) {
-      if (err.response) {
-        throw new Error(
-          `HTTP ${err.response.status} fetching swagger for "${src.webUrl}"`
-        );
+    clearTimeout(timeoutId);
+    if (err instanceof Error) {
+      if (err.name === "AbortError") {
+        throw new Error(`Request timeout fetching swagger for "${src.webUrl}"`);
       }
       throw new Error(`Network error fetching swagger: ${err.message}`);
     }
