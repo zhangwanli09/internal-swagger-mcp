@@ -17,6 +17,18 @@
 npm install && npm run build
 ```
 
+## 脚本
+
+| 命令 | 说明 |
+|------|------|
+| `npm run build` | 编译 TypeScript 到 `dist/` |
+| `npm start` | stdio 模式启动（供客户端直接调用） |
+| `npm run serve` | HTTP 模式启动，默认端口 3000 |
+| `npm run dev` | stdio 模式开发，文件变更自动重启 |
+| `npm run dev:serve` | HTTP 模式开发，文件变更自动重启 |
+
+> Node.js >= 18 required
+
 ## 配置
 
 编辑 `swagger-sources.json`：
