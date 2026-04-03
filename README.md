@@ -1,32 +1,25 @@
 # swagger-mcp-server
 
-一个 [MCP (Model Context Protocol)](https://modelcontextprotocol.io/) 服务，让 Claude 等 AI 助手能够直接查询内部 Swagger API 文档。
+让支持 MCP 协议的 AI 助手直接查询内部 Swagger API 文档。
 
-## 功能
-
-提供 4 个 MCP 工具：
+## 工具
 
 | 工具 | 说明 |
 |------|------|
-| `swagger_list_sources` | 列出所有已配置的服务及其模块、接口数量、缓存状态 |
-| `swagger_search_api` | 按关键词搜索接口，支持过滤 HTTP 方法和服务范围 |
-| `swagger_get_api_detail` | 获取单个接口的完整参数定义和 Mock 响应示例 |
-| `swagger_refresh_cache` | 强制重新拉取文档数据，更新内存缓存 |
-
-## 环境要求
-
-- Node.js 18+
+| `swagger_list_sources` | 列出所有服务及缓存状态 |
+| `swagger_search_api` | 按关键词搜索接口，支持过滤方法和服务 |
+| `swagger_get_api_detail` | 获取接口完整参数定义和 Mock 示例 |
+| `swagger_refresh_cache` | 强制刷新文档缓存 |
 
 ## 安装
 
 ```bash
-npm install
-npm run build
+npm install && npm run build
 ```
 
 ## 配置
 
-编辑 `swagger-sources.json`，填入 Swagger 服务的 Web UI 地址：
+编辑 `swagger-sources.json`：
 
 ```json
 {
@@ -40,61 +33,63 @@ npm run build
 }
 ```
 
-- `webUrl`：Swagger 平台的浏览器地址（含 `uid` 参数）
-- `name`（可选）：服务别名，不填则自动读取文档中的项目名
+- `webUrl`：Swagger 平台浏览器地址（含 `uid` 参数）
+- `name`（可选）：服务别名，不填则自动读取项目名
 - `cacheMinutes`（可选）：缓存有效期，默认 30 分钟
 
-## 接入 Claude Desktop
+## 接入
 
-在 Claude Desktop 配置文件中添加（通常位于 `%APPDATA%\Claude\claude_desktop_config.json`）：
+### stdio（本地）
+
+由客户端直接启动进程，适合个人使用：
 
 ```json
 {
   "mcpServers": {
     "swagger": {
       "command": "node",
-      "args": ["D:/projects/swagger-mcp-server/dist/index.js"]
+      "args": ["/path/to/swagger-mcp-server/dist/index.js"]
     }
   }
 }
 ```
 
-修改配置后重启 Claude Desktop 即可使用。
+### HTTP（团队共享）
 
-## 本地开发
+启动后团队成员通过内网 IP 连接，无需各自部署：
 
 ```bash
-# 监听模式运行（无需编译）
-npm run dev
-
-# 编译
-npm run build
-
-# 运行编译产物
-npm start
+npm run serve           # 默认端口 3000
+PORT=8080 npm run serve
 ```
 
-## 使用示例
+客户端配置：
 
-在 Claude 中：
+```json
+{
+  "mcpServers": {
+    "swagger": {
+      "url": "http://<内网IP>:3000/mcp"
+    }
+  }
+}
+```
 
-- **查看可用服务**：`用 swagger_list_sources 列出所有服务`
-- **搜索接口**：`搜索关键词"登录"的接口`
-- **查看详情**：`获取 POST /api/user/login 的完整参数`
-- **刷新数据**：`刷新订单服务的缓存`
+健康检查：`http://<内网IP>:3000/health`
 
 ## 项目结构
 
 ```
 src/
-├── index.ts                    # 入口，注册 MCP Server（stdio 传输）
-├── types.ts                    # TypeScript 类型定义
-├── constants.ts                # 常量（超时、缓存、请求头等）
+├── index.ts              # stdio 入口
+├── server.ts             # HTTP 入口
+├── types.ts
+├── constants.ts
 ├── services/
-│   └── swagger-client.ts       # 拉取、解析、缓存 Swagger 数据
+│   └── swagger-client.ts
 └── tools/
-    ├── list-sources.ts         # swagger_list_sources 工具
-    ├── search-api.ts           # swagger_search_api 工具
-    ├── get-api-detail.ts       # swagger_get_api_detail 工具
-    └── refresh-cache.ts        # swagger_refresh_cache 工具
+    ├── list-sources.ts
+    ├── search-api.ts
+    ├── get-api-detail.ts
+    └── refresh-cache.ts
 ```
