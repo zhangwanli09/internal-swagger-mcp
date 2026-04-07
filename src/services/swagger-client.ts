@@ -87,8 +87,7 @@ async function fetchSource(src: SwaggerSourceConfig): Promise<CachedSource> {
     );
   }
 
-  const name =
-    src.name?.trim() || response.data.projectInfo?.projectName || "未命名服务";
+  const name = response.data.projectInfo?.projectName || "未命名服务";
 
   return {
     name,
@@ -108,7 +107,7 @@ export async function getSource(
   cacheMinutes: number,
   forceRefresh = false
 ): Promise<CachedSource> {
-  const tempName = src.name ?? src.webUrl;
+  const tempName = src.webUrl;
   const cached = cache.get(tempName);
 
   if (!forceRefresh && cached && isCacheValid(cached, cacheMinutes)) {
@@ -134,21 +133,10 @@ export async function loadAllSources(forceRefresh = false): Promise<CachedSource
 }
 
 export async function loadSourceByName(
-  name: string,
-  forceRefresh = false
+  name: string
 ): Promise<CachedSource | undefined> {
-  const cfg = loadConfig();
-  const cacheMinutes = cfg.cacheMinutes ?? DEFAULT_CACHE_MINUTES;
-  const src = cfg.sources.find(
-    (s) => (s.name ?? "").toLowerCase() === name.toLowerCase()
-  );
-  // Try by cached name too
-  if (!src) {
-    // Maybe the name matches the auto-detected projectName
-    const all = await loadAllSources(false);
-    return all.find((c) => c.name.toLowerCase() === name.toLowerCase());
-  }
-  return getSource(src, cacheMinutes, forceRefresh);
+  const all = await loadAllSources(false);
+  return all.find((c) => c.name.toLowerCase() === name.toLowerCase());
 }
 
 export function getCacheStatus(): Array<{
@@ -158,7 +146,7 @@ export function getCacheStatus(): Array<{
 }> {
   const cfg = loadConfig();
   return cfg.sources.map((src) => {
-    const tempName = src.name ?? src.webUrl;
+    const tempName = src.webUrl;
     const cached = cache.get(tempName);
     return {
       name: cached?.name ?? tempName,

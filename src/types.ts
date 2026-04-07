@@ -117,7 +117,6 @@ export interface ApiResponse {
 
 export interface SwaggerSourceConfig {
   webUrl: string;
-  name?: string;
 }
 
 export interface SourcesConfig {

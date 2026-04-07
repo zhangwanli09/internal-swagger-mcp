@@ -77,7 +77,7 @@ export function registerSearchApi(server: McpServer): void {
       try {
         let sources;
         if (params.source) {
-          const single = await loadSourceByName(params.source, false);
+          const single = await loadSourceByName(params.source);
           if (!single) {
             return {
               content: [

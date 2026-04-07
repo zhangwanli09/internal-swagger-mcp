@@ -104,7 +104,7 @@ export function registerGetApiDetail(server: McpServer): void {
     async (params: GetDetailInput) => {
       try {
         let sources;
-        const single = await loadSourceByName(params.source, false);
+        const single = await loadSourceByName(params.source);
         if (single) {
           sources = [single];
         } else {

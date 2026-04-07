@@ -37,8 +37,7 @@ npm install && npm run build
 {
   "sources": [
     {
-      "webUrl": "http://your-server/...#/swaggerManage?uid=xxx",
-      "name": "订单服务"
+      "webUrl": "http://your-server/...#/swaggerManage?uid=xxx"
     }
   ],
   "cacheMinutes": 30
@@ -46,7 +45,6 @@ npm install && npm run build
 ```
 
 - `webUrl`：Swagger 平台浏览器地址（含 `uid` 参数）
-- `name`（可选）：服务别名，不填则自动读取项目名
 - `cacheMinutes`（可选）：缓存有效期，默认 30 分钟
 
 ## 接入

@@ -36,7 +36,7 @@ export function registerRefreshCache(server: McpServer): void {
       try {
         if (params.source) {
           clearCache(params.source);
-          const src = await loadSourceByName(params.source, true);
+          const src = await loadSourceByName(params.source);
           if (!src) {
             return {
               content: [
