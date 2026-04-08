@@ -7,6 +7,7 @@ import { registerListSources } from "./tools/list-sources.js";
 import { registerSearchApi } from "./tools/search-api.js";
 import { registerGetApiDetail } from "./tools/get-api-detail.js";
 import { registerRefreshCache } from "./tools/refresh-cache.js";
+import { runWithSources } from "./services/source-context.js";
 
 const PORT = Number(process.env.PORT ?? 3000);
 
@@ -14,15 +15,39 @@ const app = express();
 app.use(express.json());
 
 app.post("/mcp", async (req, res) => {
-  const server = new McpServer({ name: "swagger-mcp-server", version: "1.0.0" });
-  registerListSources(server);
-  registerSearchApi(server);
-  registerGetApiDetail(server);
-  registerRefreshCache(server);
+  const headerVal = req.header("x-swagger-sources");
+  if (!headerVal || !headerVal.trim()) {
+    res.status(400).json({
+      error: "Missing X-Swagger-Sources header. Provide a JSON array of swagger Web UI URLs.",
+    });
+    return;
+  }
 
-  const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
-  await server.connect(transport);
-  await transport.handleRequest(req, res, req.body);
+  let sources: string[];
+  try {
+    const parsed = JSON.parse(headerVal);
+    if (!Array.isArray(parsed) || !parsed.every((u) => typeof u === "string")) {
+      throw new Error("must be a JSON array of URL strings");
+    }
+    sources = parsed;
+  } catch (err) {
+    res.status(400).json({
+      error: `Invalid X-Swagger-Sources header: ${err instanceof Error ? err.message : String(err)}`,
+    });
+    return;
+  }
+
+  await runWithSources(sources, async () => {
+    const server = new McpServer({ name: "swagger-mcp-server", version: "1.0.0" });
+    registerListSources(server);
+    registerSearchApi(server);
+    registerGetApiDetail(server);
+    registerRefreshCache(server);
+
+    const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
+    await server.connect(transport);
+    await transport.handleRequest(req, res, req.body);
+  });
 });
 
 app.get("/health", (_req, res) => {

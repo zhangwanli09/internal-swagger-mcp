@@ -1,26 +1,42 @@
-import { readFileSync } from "fs";
-import { resolve, dirname } from "path";
-import { fileURLToPath } from "url";
 import type {
   ApiResponse,
   ApiResponseData,
   CachedSource,
 } from "../types.js";
 import { DEFAULT_CACHE_MINUTES, FIXED_HEADERS, REQUEST_TIMEOUT_MS } from "../constants.js";
+import { getCurrentSources } from "./source-context.js";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const SOURCES_CONFIG_PATH = resolve(__dirname, "../../swagger-sources.json");
-
-// In-memory cache: sourceName -> CachedSource
+// In-memory cache: sourceName / url -> CachedSource (URL keys are tenant-safe since URLs are globally unique)
 const cache = new Map<string, CachedSource>();
 
-let config: string[] | null = null;
+const NO_SOURCES_ERROR =
+  'No swagger sources configured. Pass via SWAGGER_SOURCES env var (stdio mode, JSON array of URLs) or X-Swagger-Sources header (HTTP mode, JSON array of URLs).';
+
+function parseSourcesJson(raw: string, origin: string): string[] {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (err) {
+    throw new Error(
+      `Failed to parse ${origin} as JSON: ${err instanceof Error ? err.message : String(err)}. Expected a JSON array of URLs.`
+    );
+  }
+  if (!Array.isArray(parsed) || !parsed.every((u) => typeof u === "string")) {
+    throw new Error(`${origin} must be a JSON array of URL strings.`);
+  }
+  return parsed;
+}
 
 function loadConfig(): string[] {
-  if (config) return config;
-  const raw = readFileSync(SOURCES_CONFIG_PATH, "utf-8");
-  config = JSON.parse(raw) as string[];
-  return config;
+  const fromContext = getCurrentSources();
+  if (fromContext && fromContext.length > 0) return fromContext;
+
+  const fromEnv = process.env.SWAGGER_SOURCES;
+  if (fromEnv && fromEnv.trim().length > 0) {
+    return parseSourcesJson(fromEnv, "SWAGGER_SOURCES env var");
+  }
+
+  throw new Error(NO_SOURCES_ERROR);
 }
 
 /**

@@ -19,6 +19,11 @@ registerRefreshCache(server);
 async function main(): Promise<void> {
   const transport = new StdioServerTransport();
   await server.connect(transport);
+  if (!process.env.SWAGGER_SOURCES?.trim()) {
+    console.error(
+      "Warning: SWAGGER_SOURCES env var not set. Tool calls will fail until it is provided."
+    );
+  }
   console.error("Swagger MCP Server running via stdio");
 }
 

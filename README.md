@@ -31,28 +31,36 @@ npm install && npm run build
 
 ## 配置
 
-编辑 `swagger-sources.json`：
+Swagger 源列表由 **MCP 客户端** 在接入时传入，服务本身不再持有任何源配置。两种模式的传入方式不同：
+
+| 模式  | 传入方式 |
+|-------|----------|
+| stdio | 启动进程的环境变量 `SWAGGER_SOURCES` |
+| HTTP  | 每次请求的 HTTP header `X-Swagger-Sources` |
+
+格式统一为 **JSON 数组字符串**，元素为 Swagger 平台浏览器地址（含 `uid` 参数）：
 
 ```json
-[
-  "http://your-server/...#/swaggerManage?uid=xxx"
-]
+["http://your-server/...#/swaggerManage?uid=xxx"]
 ```
 
-填入 Swagger 平台浏览器地址（含 `uid` 参数），支持配置多个。缓存有效期固定为 30 分钟。
+缓存有效期固定为 30 分钟。
 
 ## 接入
 
 ### stdio（本地）
 
-由客户端直接启动进程，适合个人使用：
+由客户端直接启动进程，源通过 `env` 传入：
 
 ```json
 {
   "mcpServers": {
     "swagger": {
       "command": "node",
-      "args": ["/path/to/swagger-mcp-server/dist/index.js"]
+      "args": ["/path/to/swagger-mcp-server/dist/index.js"],
+      "env": {
+        "SWAGGER_SOURCES": "[\"http://your-server/...#/swaggerManage?uid=xxx\"]"
+      }
     }
   }
 }
@@ -60,24 +68,29 @@ npm install && npm run build
 
 ### HTTP（团队共享）
 
-启动后团队成员通过内网 IP 连接，无需各自部署：
+服务端启动一次，多个客户端共用，每个客户端自带自己的源：
 
 ```bash
 npm run serve           # 默认端口 3000
 PORT=8080 npm run serve
 ```
 
-客户端配置：
+客户端配置（注意 `headers.X-Swagger-Sources` 是必填的，缺失会返回 400）：
 
 ```json
 {
   "mcpServers": {
     "swagger": {
-      "url": "http://<内网IP>:3000/mcp"
+      "url": "http://<内网IP>:3000/mcp",
+      "headers": {
+        "X-Swagger-Sources": "[\"http://your-server/...#/swaggerManage?uid=xxx\"]"
+      }
     }
   }
 }
 ```
+
+> HTTP 模式下源是 per-request 的——同一个 server 进程可以同时为多个团队/项目提供服务，互不干扰。
 
 健康检查：`http://<内网IP>:3000/health`
 
@@ -90,7 +103,8 @@ PORT=8080 npm run serve
 直接用 `tsx` 启动，改完代码重新运行即可，无需先 build：
 
 ```bash
-npx @modelcontextprotocol/inspector tsx src/index.ts
+SWAGGER_SOURCES='["http://your-server/...#/swaggerManage?uid=xxx"]' \
+  npx @modelcontextprotocol/inspector tsx src/index.ts
 ```
 
 ### HTTP 模式
