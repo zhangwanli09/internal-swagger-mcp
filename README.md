@@ -1,6 +1,8 @@
 # swagger-mcp-server
 
-让支持 MCP 协议的 AI 助手直接查询内部 Swagger API 文档。
+让支持 MCP 协议的 AI 助手直接查询内部 Swagger 管理平台上的 API 文档。
+
+> **适用范围**：本项目对接的是某个**内部 Swagger 管理平台**，消费的是该平台的私有分享接口（`/flow/swagger/share?uid=...`）及其自定义包装响应，而非标准 OpenAPI/Swagger JSON。用户只需从平台复制一个浏览器可访问的文档地址（含 `uid`），由本服务负责解析其中的接口请求/响应定义。
 
 ## 工具
 
