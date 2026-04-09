@@ -42,8 +42,8 @@ function loadConfig(): string[] {
 /**
  * Parse a Web UI URL and extract the API URL for fetching swagger data.
  *
- * Input:  http://172.16.101.121:8112/?redirect=/login#/swaggerManage?fs-tenant=null&uid=xxx&formShare=0
- * Output: http://172.16.101.121:8112/flow/swagger/share?uid=xxx&fs-tenant=null
+ * Input:  http://swagger.example.com/?redirect=/login#/swaggerManage?fs-tenant=null&uid=xxx&formShare=0
+ * Output: http://swagger.example.com/flow/swagger/share?uid=xxx&fs-tenant=null
  */
 export function parseWebUrl(webUrl: string): string {
   const url = new URL(webUrl);
