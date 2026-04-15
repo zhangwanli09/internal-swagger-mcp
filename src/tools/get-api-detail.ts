@@ -23,6 +23,19 @@ function resolveType(paramType: string | undefined, isList: boolean | undefined,
   return isList ? `${name}[]` : name;
 }
 
+// 平台 checkType 枚举没有统一规范：
+//   - 部分模块：0=选填, 1=必填(默认错误消息), 2=必填(自定义错误消息)
+//   - 部分模块：没有 0，用 1=选填, 2=必填
+// 因此单看数值无法判定，需要组合 resultMsg。只要 resultMsg 非空即视为必填（平台只在需要校验时才填写）。
+function isRequired(p: Param): "是" | "否" | "?" {
+  const ct = p.checkType;
+  const hasMsg = !!(p.resultMsg && p.resultMsg.trim());
+  if (ct === 0) return "否";
+  if (ct !== undefined && ct >= 2) return "是";
+  if (ct === 1) return hasMsg ? "是" : "?";
+  return "否";
+}
+
 function formatParams(
   params: Param[],
   label: string,
@@ -38,7 +51,7 @@ function formatParams(
     lines.push("|--------|------|------|------|");
   }
   for (const p of params) {
-    const required = p.checkType === 1 ? "是" : "否";
+    const required = isRequired(p);
     const typeStr = resolveType(p.paramType, p.isList, typeMap);
     const desc = (p.description ?? "").replace(/\|/g, "\\|").replace(/\n/g, " ");
     lines.push(`| ${prefix}${p.paramName} | ${typeStr} | ${required} | ${desc} |`);
@@ -90,6 +103,7 @@ export function registerGetApiDetail(server: McpServer): void {
 返回内容:
 - 接口基本信息（名称、描述、状态、Content-Type）
 - Query/Path/Header/Form/Body 各类参数的完整定义（参数名、类型、是否必填、描述）
+  必填列: "是"=必填, "否"=选填, "?"=平台元数据不明确（checkType=1 且无错误消息，建议对照后端代码或按选填处理）
 - 嵌套 Object 参数的子字段
 - 响应结果（Demo JSON + 输出字段表格）
 - Mock 响应字段表格`,

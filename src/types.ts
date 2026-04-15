@@ -2,7 +2,7 @@ export interface Param {
   paramName: string;
   paramType?: string;       // 字符串数字 ID，如 '0'='String', '16'='Object'
   description?: string;
-  checkType?: number;       // 1=必填, 2=可选
+  checkType?: number;       // 平台各模块口径不一：部分模块 0=选填/1,2=必填；部分模块 1=选填/2=必填。需结合 resultMsg 判断（见 get-api-detail.ts#isRequired）
   isList?: boolean;         // 是否为数组
   children?: Param[];       // Object 类型的嵌套字段
   defaultValue?: string;
