@@ -3,6 +3,24 @@ import { z } from "zod";
 import { getCacheStatus, loadAllSources } from "../services/swagger-client.js";
 import { DEFAULT_CACHE_MINUTES } from "../constants.js";
 
+const ListSourcesOutput = z.object({
+  sources: z.array(
+    z.object({
+      name: z.string(),
+      loaded: z.boolean(),
+      projectPath: z.string().optional(),
+      status: z.string().optional(),
+      totalInterfaces: z.number().int().optional(),
+      fetchedAt: z.string().datetime().optional(),
+      cacheValidMinutes: z.number().int().optional(),
+      modules: z.array(z.string()).optional(),
+      apiUrl: z.string().optional(),
+    })
+  ),
+});
+
+type ListSourcesOutputType = z.infer<typeof ListSourcesOutput>;
+
 export function registerListSources(server: McpServer): void {
   server.registerTool(
     "swagger_list_sources",
@@ -18,6 +36,7 @@ export function registerListSources(server: McpServer): void {
 
 用途：在使用 swagger_search_api 之前，可先用此工具了解有哪些可用服务。`,
       inputSchema: z.object({}).strict(),
+      outputSchema: ListSourcesOutput,
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -31,20 +50,34 @@ export function registerListSources(server: McpServer): void {
         const sources = await loadAllSources(false);
         const statuses = getCacheStatus();
 
+        const structured: ListSourcesOutputType = { sources: [] };
         const lines: string[] = ["# 已配置的 Swagger 文档源\n"];
+
         for (const src of sources) {
           const totalInterfaces = src.data.modules.reduce(
             (sum, m) => sum + (m.interfaceInfos?.length ?? 0),
             0
           );
-          const modules = src.data.modules.map((m) => m.moduleName).join("、");
+          const moduleNames = src.data.modules.map((m) => m.moduleName);
+
+          structured.sources.push({
+            name: src.name,
+            loaded: true,
+            projectPath: src.data.projectInfo.projectPath,
+            status: src.data.projectInfo.projectStatusName ?? undefined,
+            totalInterfaces,
+            fetchedAt: src.fetchedAt.toISOString(),
+            cacheValidMinutes: DEFAULT_CACHE_MINUTES,
+            modules: moduleNames,
+          });
+
           lines.push(`## ${src.name}`);
           lines.push(`- **项目路径**: ${src.data.projectInfo.projectPath}`);
           lines.push(`- **状态**: ${src.data.projectInfo.projectStatusName ?? "未知"}`);
           lines.push(`- **接口总数**: ${totalInterfaces}`);
           lines.push(`- **缓存时间**: ${src.fetchedAt.toLocaleString("zh-CN")}`);
           lines.push(`- **缓存有效期**: ${DEFAULT_CACHE_MINUTES} 分钟`);
-          if (modules) lines.push(`- **模块**: ${modules}`);
+          if (moduleNames.length > 0) lines.push(`- **模块**: ${moduleNames.join("、")}`);
           lines.push("");
         }
 
@@ -52,15 +85,20 @@ export function registerListSources(server: McpServer): void {
         const loadedNames = new Set(sources.map((s) => s.name));
         for (const st of statuses) {
           if (!loadedNames.has(st.name)) {
+            structured.sources.push({
+              name: st.name,
+              loaded: false,
+              apiUrl: st.apiUrl,
+            });
             lines.push(`## ${st.name} ⚠️ (未加载)`);
             lines.push(`- **API URL**: ${st.apiUrl}`);
             lines.push("");
           }
         }
 
-        const text = lines.join("\n");
         return {
-          content: [{ type: "text" as const, text }],
+          content: [{ type: "text" as const, text: lines.join("\n") }],
+          structuredContent: structured,
         };
       } catch (err) {
         return {

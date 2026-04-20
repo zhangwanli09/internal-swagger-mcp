@@ -32,6 +32,26 @@ const SearchInputSchema = z.object({
 
 type SearchInput = z.infer<typeof SearchInputSchema>;
 
+const ApiMatchSchema = z.object({
+  sourceName: z.string(),
+  moduleName: z.string(),
+  method: z.string(),
+  path: z.string(),
+  name: z.string(),
+  description: z.string(),
+  status: z.string(),
+});
+
+const SearchApiOutput = z.object({
+  keyword: z.string(),
+  total: z.number().int(),
+  truncated: z.boolean(),
+  results: z.array(ApiMatchSchema),
+});
+
+type SearchApiOutputType = z.infer<typeof SearchApiOutput>;
+type ApiMatch = z.infer<typeof ApiMatchSchema>;
+
 function matchesKeyword(keyword: string, iface: InterfaceInfo, module: Module): boolean {
   const kw = keyword.toLowerCase();
   return (
@@ -66,6 +86,7 @@ export function registerSearchApi(server: McpServer): void {
 - 搜索 POST 接口: keyword="用户", method="POST"
 - 在特定服务搜索: keyword="order", source="订单服务"`,
       inputSchema: SearchInputSchema,
+      outputSchema: SearchApiOutput,
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -94,17 +115,7 @@ export function registerSearchApi(server: McpServer): void {
           sources = await loadAllSources(false);
         }
 
-        interface MatchResult {
-          sourceName: string;
-          moduleName: string;
-          method: string;
-          path: string;
-          name: string;
-          description: string;
-          status: string;
-        }
-
-        const results: MatchResult[] = [];
+        const results: ApiMatch[] = [];
 
         for (const src of sources) {
           for (const mod of src.data.modules) {
@@ -134,6 +145,14 @@ export function registerSearchApi(server: McpServer): void {
           if (results.length >= params.limit) break;
         }
 
+        const truncated = results.length >= params.limit;
+        const structured: SearchApiOutputType = {
+          keyword: params.keyword,
+          total: results.length,
+          truncated,
+          results,
+        };
+
         if (results.length === 0) {
           return {
             content: [
@@ -142,6 +161,7 @@ export function registerSearchApi(server: McpServer): void {
                 text: `未找到匹配 "${params.keyword}" 的接口${params.method ? `（方法: ${params.method}）` : ""}。\n\n提示：可用 swagger_list_sources 查看已配置的服务和模块。`,
               },
             ],
+            structuredContent: structured,
           };
         }
 
@@ -158,7 +178,7 @@ export function registerSearchApi(server: McpServer): void {
           lines.push("");
         }
 
-        if (results.length >= params.limit) {
+        if (truncated) {
           lines.push(
             `> 结果已达上限 ${params.limit} 条，可增加 limit 或使用 source/method 参数缩小范围。`
           );
@@ -173,6 +193,7 @@ export function registerSearchApi(server: McpServer): void {
 
         return {
           content: [{ type: "text" as const, text }],
+          structuredContent: structured,
         };
       } catch (err) {
         return {

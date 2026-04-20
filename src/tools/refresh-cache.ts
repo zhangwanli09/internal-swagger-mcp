@@ -11,6 +11,18 @@ const RefreshInputSchema = z.object({
 
 type RefreshInput = z.infer<typeof RefreshInputSchema>;
 
+const RefreshCacheOutput = z.object({
+  refreshed: z.array(
+    z.object({
+      name: z.string(),
+      totalInterfaces: z.number().int(),
+      fetchedAt: z.string().datetime(),
+    })
+  ),
+});
+
+type RefreshCacheOutputType = z.infer<typeof RefreshCacheOutput>;
+
 export function registerRefreshCache(server: McpServer): void {
   server.registerTool(
     "swagger_refresh_cache",
@@ -25,6 +37,7 @@ export function registerRefreshCache(server: McpServer): void {
 
 返回: 刷新结果，包括成功/失败状态和接口数量变化。`,
       inputSchema: RefreshInputSchema,
+      outputSchema: RefreshCacheOutput,
       annotations: {
         readOnlyHint: false,
         destructiveHint: false,
@@ -52,6 +65,15 @@ export function registerRefreshCache(server: McpServer): void {
             (sum, m) => sum + (m.interfaceInfos?.length ?? 0),
             0
           );
+          const structured: RefreshCacheOutputType = {
+            refreshed: [
+              {
+                name: src.name,
+                totalInterfaces: total,
+                fetchedAt: src.fetchedAt.toISOString(),
+              },
+            ],
+          };
           return {
             content: [
               {
@@ -59,20 +81,28 @@ export function registerRefreshCache(server: McpServer): void {
                 text: `✓ 已刷新 "${src.name}" 的缓存\n- 接口总数: ${total}\n- 刷新时间: ${src.fetchedAt.toLocaleString("zh-CN")}`,
               },
             ],
+            structuredContent: structured,
           };
         } else {
           clearCache();
           const sources = await loadAllSources(true);
+          const structured: RefreshCacheOutputType = { refreshed: [] };
           const lines: string[] = ["✓ 已刷新全部服务缓存\n"];
           for (const src of sources) {
             const total = src.data.modules.reduce(
               (sum, m) => sum + (m.interfaceInfos?.length ?? 0),
               0
             );
+            structured.refreshed.push({
+              name: src.name,
+              totalInterfaces: total,
+              fetchedAt: src.fetchedAt.toISOString(),
+            });
             lines.push(`- **${src.name}**: ${total} 个接口`);
           }
           return {
             content: [{ type: "text" as const, text: lines.join("\n") }],
+            structuredContent: structured,
           };
         }
       } catch (err) {
