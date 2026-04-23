@@ -1,12 +1,12 @@
 {
-  "name": "swagger-mcp-server",
+  "name": "internal-swagger-mcp",
   "version": "1.0.0",
   "description": "MCP server for querying internal Swagger API documentation",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
-    "swagger-mcp-server": "dist/index.js"
+    "internal-swagger-mcp": "dist/index.js"
   },
   "files": [
     "dist",
@@ -32,12 +32,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/zhangwanli09/swagger-mcp-server.git"
+    "url": "git+https://github.com/zhangwanli09/internal-swagger-mcp.git"
   },
   "bugs": {
-    "url": "https://github.com/zhangwanli09/swagger-mcp-server/issues"
+    "url": "https://github.com/zhangwanli09/internal-swagger-mcp/issues"
   },
-  "homepage": "https://github.com/zhangwanli09/swagger-mcp-server#readme",
+  "homepage": "https://github.com/zhangwanli09/internal-swagger-mcp#readme",
   "engines": {
     "node": ">=18"
   },

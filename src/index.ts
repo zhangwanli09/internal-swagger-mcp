@@ -4,14 +4,14 @@ import { startHttp } from "./http.js";
 
 const VERSION = "1.0.0";
 
-const HELP = `swagger-mcp-server ${VERSION}
+const HELP = `internal-swagger-mcp ${VERSION}
 
 MCP server for querying internal Swagger API documentation.
 
 Usage:
-  swagger-mcp-server                    Start in stdio mode (default, for MCP clients)
-  swagger-mcp-server --http             Start HTTP server on port 3000
-  swagger-mcp-server --http --port 8080 Start HTTP server on a custom port
+  internal-swagger-mcp                    Start in stdio mode (default, for MCP clients)
+  internal-swagger-mcp --http             Start HTTP server on port 3000
+  internal-swagger-mcp --http --port 8080 Start HTTP server on a custom port
 
 Options:
   --http           Use Streamable HTTP transport instead of stdio

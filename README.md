@@ -1,4 +1,4 @@
-# swagger-mcp-server
+# internal-swagger-mcp
 
 让支持 MCP 协议的 AI 助手直接查询内部 Swagger 管理平台上的 API 文档。
 
@@ -26,9 +26,9 @@ curl http://localhost:3000/health # 3. 验证
 发布到 npm 后也可直接用：
 
 ```bash
-npx swagger-mcp-server            # stdio 模式（供 MCP 客户端调用）
-npx swagger-mcp-server --http     # HTTP 模式，默认 3000
-npx swagger-mcp-server --http --port 8080   # 自定义端口
+npx internal-swagger-mcp            # stdio 模式（供 MCP 客户端调用）
+npx internal-swagger-mcp --http     # HTTP 模式，默认 3000
+npx internal-swagger-mcp --http --port 8080   # 自定义端口
 ```
 
 完成后参考下文"接入方式"把服务挂到你的 MCP 客户端。本地调试推荐使用 stdio 模式。
@@ -44,7 +44,7 @@ npx swagger-mcp-server --http --port 8080   # 自定义端口
   "mcpServers": {
     "swagger": {
       "command": "node",
-      "args": ["/path/to/swagger-mcp-server/dist/index.js"],
+      "args": ["/path/to/internal-swagger-mcp/dist/index.js"],
       "env": {
         "SWAGGER_SOURCES": "[\"http://your-server/...#/swaggerManage?uid=xxx\"]"
       }

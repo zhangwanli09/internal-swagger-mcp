@@ -85,7 +85,7 @@ export async function startHttp({ port }: { port: number }): Promise<void> {
     }
 
     await runWithSources(sources, async () => {
-      const server = new McpServer({ name: "swagger-mcp-server", version: "1.0.0" });
+      const server = new McpServer({ name: "internal-swagger-mcp", version: "1.0.0" });
       registerListSources(server);
       registerSearchApi(server);
       registerGetApiDetail(server);

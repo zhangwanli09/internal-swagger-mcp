@@ -7,7 +7,7 @@ import { registerRefreshCache } from "./tools/refresh-cache.js";
 
 export async function startStdio(): Promise<void> {
   const server = new McpServer({
-    name: "swagger-mcp-server",
+    name: "internal-swagger-mcp",
     version: "1.0.0",
   });
 
