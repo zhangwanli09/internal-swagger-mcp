@@ -1,30 +1,67 @@
 #!/usr/bin/env node
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { registerListSources } from "./tools/list-sources.js";
-import { registerSearchApi } from "./tools/search-api.js";
-import { registerGetApiDetail } from "./tools/get-api-detail.js";
-import { registerRefreshCache } from "./tools/refresh-cache.js";
+import { startStdio } from "./stdio.js";
+import { startHttp } from "./http.js";
 
-const server = new McpServer({
-  name: "swagger-mcp-server",
-  version: "1.0.0",
-});
+const VERSION = "1.0.0";
 
-registerListSources(server);
-registerSearchApi(server);
-registerGetApiDetail(server);
-registerRefreshCache(server);
+const HELP = `swagger-mcp-server ${VERSION}
+
+MCP server for querying internal Swagger API documentation.
+
+Usage:
+  swagger-mcp-server                    Start in stdio mode (default, for MCP clients)
+  swagger-mcp-server --http             Start HTTP server on port 3000
+  swagger-mcp-server --http --port 8080 Start HTTP server on a custom port
+
+Options:
+  --http           Use Streamable HTTP transport instead of stdio
+  --port <number>  HTTP port (default: 3000, or $PORT if set)
+  -h, --help       Show this help
+  -v, --version    Show version
+
+Environment:
+  SWAGGER_SOURCES       (stdio)  JSON array of Swagger Web UI URLs
+  PORT                  (http)   Override default HTTP port
+  MCP_ALLOWED_ORIGINS   (http)   Comma-separated allowed Origin headers
+  MCP_BEARER_TOKEN      (http)   Require "Authorization: Bearer <token>"
+`;
+
+function parseArgs(argv: string[]): { http: boolean; port: number } {
+  const http = argv.includes("--http");
+  const portIdx = argv.indexOf("--port");
+  let portFromCli: number | undefined;
+  if (portIdx >= 0) {
+    const raw = argv[portIdx + 1];
+    const n = Number(raw);
+    if (!raw || !Number.isFinite(n) || n <= 0) {
+      console.error(`Invalid --port value: ${raw ?? "(missing)"}`);
+      process.exit(1);
+    }
+    portFromCli = n;
+  }
+  const portFromEnv = process.env.PORT ? Number(process.env.PORT) : undefined;
+  const port = portFromCli ?? (portFromEnv && Number.isFinite(portFromEnv) ? portFromEnv : 3000);
+  return { http, port };
+}
 
 async function main(): Promise<void> {
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
-  if (!process.env.SWAGGER_SOURCES?.trim()) {
-    console.error(
-      "Warning: SWAGGER_SOURCES env var not set. Tool calls will fail until it is provided."
-    );
+  const args = process.argv.slice(2);
+
+  if (args.includes("-h") || args.includes("--help")) {
+    process.stdout.write(HELP);
+    return;
   }
-  console.error("Swagger MCP Server running via stdio");
+  if (args.includes("-v") || args.includes("--version")) {
+    process.stdout.write(`${VERSION}\n`);
+    return;
+  }
+
+  const { http, port } = parseArgs(args);
+  if (http) {
+    await startHttp({ port });
+  } else {
+    await startStdio();
+  }
 }
 
 main().catch((err: unknown) => {

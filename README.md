@@ -23,6 +23,14 @@ npm run serve                     # 2. HTTP 模式启动（默认 3000 端口）
 curl http://localhost:3000/health # 3. 验证
 ```
 
+发布到 npm 后也可直接用：
+
+```bash
+npx swagger-mcp-server            # stdio 模式（供 MCP 客户端调用）
+npx swagger-mcp-server --http     # HTTP 模式，默认 3000
+npx swagger-mcp-server --http --port 8080   # 自定义端口
+```
+
 完成后参考下文"接入方式"把服务挂到你的 MCP 客户端。本地调试推荐使用 stdio 模式。
 
 ## 接入方式
@@ -79,7 +87,7 @@ curl http://localhost:3000/health # 3. 验证
 
 - **缓存有效期**：30 分钟固定 TTL，需强制刷新请调用 `swagger_refresh_cache`。
 - **健康检查**（HTTP 模式）：`GET http://<内网IP>:3000/health`
-- **端口**：默认 3000，可通过 `PORT=8080 npm run serve` 覆盖。
+- **端口**：默认 3000，可通过 `--port 8080` 参数或 `PORT=8080` 环境变量覆盖（CLI 参数优先）。
 
 ## 调试（MCP Inspector）
 
@@ -123,7 +131,7 @@ npx @modelcontextprotocol/inspector
 | 命令 | 说明 |
 |------|------|
 | `npm run build` | 编译 TypeScript 到 `dist/` |
-| `npm start` | stdio 模式启动（供客户端直接调用） |
-| `npm run serve` | HTTP 模式启动，默认端口 3000 |
+| `npm start` | stdio 模式启动（等价于 `node dist/index.js`） |
+| `npm run serve` | HTTP 模式启动（等价于 `node dist/index.js --http`），默认端口 3000 |
 | `npm run dev` | stdio 模式开发，文件变更自动重启 |
 | `npm run dev:serve` | HTTP 模式开发，文件变更自动重启 |

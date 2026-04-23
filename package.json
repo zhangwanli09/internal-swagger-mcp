@@ -4,13 +4,40 @@
   "description": "MCP server for querying internal Swagger API documentation",
   "type": "module",
   "main": "dist/index.js",
-  "scripts": {
-    "build": "tsc",
-    "start": "node dist/index.js",
-    "serve": "node dist/server.js",
-    "dev": "tsx watch src/index.ts",
-    "dev:serve": "tsx watch src/server.ts"
+  "types": "dist/index.d.ts",
+  "bin": {
+    "swagger-mcp-server": "dist/index.js"
   },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc && chmod +x dist/index.js",
+    "start": "node dist/index.js",
+    "serve": "node dist/index.js --http",
+    "dev": "tsx watch src/index.ts",
+    "dev:serve": "tsx watch src/index.ts --http",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "swagger",
+    "openapi",
+    "api-docs"
+  ],
+  "author": "zhangwanli",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zhangwanli09/swagger-mcp-server.git"
+  },
+  "bugs": {
+    "url": "https://github.com/zhangwanli09/swagger-mcp-server/issues"
+  },
+  "homepage": "https://github.com/zhangwanli09/swagger-mcp-server#readme",
   "engines": {
     "node": ">=18"
   },
