@@ -88,8 +88,7 @@ export function registerListSources(server: McpServer): void {
             apiUrl: f.apiUrl,
             error: f.error,
           });
-          lines.push(`## ⚠️ 未加载的源`);
-          lines.push(`- **配置 URL**: ${f.url}`);
+          lines.push(`## ⚠️ 未加载: ${f.url}`);
           lines.push(`- **API URL**: ${f.apiUrl}`);
           lines.push(`- **错误**: ${f.error}`);
           lines.push("");

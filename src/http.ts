@@ -1,5 +1,6 @@
 import { networkInterfaces } from "os";
-import express from "express";
+import { timingSafeEqual } from "crypto";
+import express, { type NextFunction, type Request, type Response } from "express";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { registerListSources } from "./tools/list-sources.js";
@@ -14,15 +15,28 @@ export async function startHttp({ port }: { port: number }): Promise<void> {
     .map((s) => s.trim())
     .filter(Boolean);
   const BEARER_TOKEN = process.env.MCP_BEARER_TOKEN?.trim() || "";
+  const BIND_HOST = process.env.MCP_BIND_HOST?.trim() || "0.0.0.0";
 
   const app = express();
   app.use(express.json());
 
-  app.post("/mcp", async (req, res) => {
+  app.post("/mcp", async (req, res, next) => {
+    try {
+    const origin = req.header("origin");
+    const hasBearer = Boolean(req.header("authorization"));
     if (ALLOWED_ORIGINS.length > 0) {
-      const origin = req.header("origin");
-      if (origin && !ALLOWED_ORIGINS.includes(origin)) {
-        res.status(403).json({ error: `Origin "${origin}" is not allowed.` });
+      if (origin) {
+        if (!ALLOWED_ORIGINS.includes(origin)) {
+          res.status(403).json({ error: `Origin "${origin}" is not allowed.` });
+          return;
+        }
+      } else if (!BEARER_TOKEN || !hasBearer) {
+        // Missing Origin is only acceptable for server-to-server calls that
+        // authenticate with a Bearer token; otherwise it may be a DNS-rebinding
+        // attack stripping the header.
+        res.status(403).json({
+          error: "Missing Origin header. When MCP_ALLOWED_ORIGINS is set, requests without Origin must include a Bearer token.",
+        });
         return;
       }
     }
@@ -30,7 +44,12 @@ export async function startHttp({ port }: { port: number }): Promise<void> {
     if (BEARER_TOKEN) {
       const auth = req.header("authorization") ?? "";
       const expected = `Bearer ${BEARER_TOKEN}`;
-      if (auth !== expected) {
+      const authBuf = Buffer.from(auth);
+      const expectedBuf = Buffer.from(expected);
+      const ok =
+        authBuf.length === expectedBuf.length &&
+        timingSafeEqual(authBuf, expectedBuf);
+      if (!ok) {
         res.status(401).json({ error: "Missing or invalid Authorization bearer token." });
         return;
       }
@@ -98,16 +117,35 @@ export async function startHttp({ port }: { port: number }): Promise<void> {
         throw err;
       }
     });
+    } catch (err) {
+      next(err);
+    }
   });
 
   app.get("/health", (_req, res) => {
     res.json({ status: "ok" });
   });
 
-  app.listen(port, "0.0.0.0", () => {
-    const ip = getLocalIP();
-    console.error(`Swagger MCP Server (HTTP) listening on http://${ip}:${port}/mcp`);
-    console.error(`Health check: http://${ip}:${port}/health`);
+  app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
+    console.error("[mcp] unhandled error:", err);
+    if (res.headersSent) {
+      res.end();
+      return;
+    }
+    res.status(500).json({
+      error: `Internal server error: ${err instanceof Error ? err.message : String(err)}`,
+    });
+  });
+
+  app.listen(port, BIND_HOST, () => {
+    const displayHost = BIND_HOST === "0.0.0.0" ? getLocalIP() : BIND_HOST;
+    console.error(`Swagger MCP Server (HTTP) listening on http://${displayHost}:${port}/mcp`);
+    console.error(`Health check: http://${displayHost}:${port}/health`);
+    if (BIND_HOST === "0.0.0.0" && !BEARER_TOKEN && ALLOWED_ORIGINS.length === 0) {
+      console.error(
+        "⚠️  Bound to 0.0.0.0 without MCP_BEARER_TOKEN or MCP_ALLOWED_ORIGINS — server is open to the network."
+      );
+    }
   });
 }
 

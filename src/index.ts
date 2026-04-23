@@ -39,8 +39,16 @@ function parseArgs(argv: string[]): { http: boolean; port: number } {
     }
     portFromCli = n;
   }
-  const portFromEnv = process.env.PORT ? Number(process.env.PORT) : undefined;
-  const port = portFromCli ?? (portFromEnv && Number.isFinite(portFromEnv) ? portFromEnv : 3000);
+  let portFromEnv: number | undefined;
+  if (process.env.PORT && process.env.PORT.trim()) {
+    const n = Number(process.env.PORT);
+    if (!Number.isFinite(n) || n <= 0) {
+      console.error(`Invalid PORT env var: ${process.env.PORT}`);
+      process.exit(1);
+    }
+    portFromEnv = n;
+  }
+  const port = portFromCli ?? portFromEnv ?? 3000;
   return { http, port };
 }
 

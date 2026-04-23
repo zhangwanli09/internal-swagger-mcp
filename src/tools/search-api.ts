@@ -47,6 +47,15 @@ const SearchApiOutput = z.object({
   total: z.number().int(),
   truncated: z.boolean(),
   results: z.array(ApiMatchSchema),
+  failed: z
+    .array(
+      z.object({
+        url: z.string(),
+        apiUrl: z.string(),
+        error: z.string(),
+      })
+    )
+    .optional(),
 });
 
 type SearchApiOutputType = z.infer<typeof SearchApiOutput>;
@@ -97,12 +106,13 @@ export function registerSearchApi(server: McpServer): void {
     async (params: SearchInput) => {
       try {
         let sources;
+        let failures: Awaited<ReturnType<typeof loadAllSources>>["failures"] = [];
         if (params.source) {
-          const { source, failures } = await loadSourceByName(params.source);
-          if (!source) {
+          const result = await loadSourceByName(params.source);
+          if (!result.source) {
             const hint =
-              failures.length > 0
-                ? `当前 ${failures.length} 个源加载失败，目标可能在其中，请用 swagger_list_sources 查看失败详情。`
+              result.failures.length > 0
+                ? `当前 ${result.failures.length} 个源加载失败，目标可能在其中，请用 swagger_list_sources 查看失败详情。`
                 : "请用 swagger_list_sources 查看可用服务名。";
             return {
               content: [
@@ -114,9 +124,11 @@ export function registerSearchApi(server: McpServer): void {
               isError: true,
             };
           }
-          sources = [source];
+          sources = [result.source];
         } else {
-          ({ sources } = await loadAllSources(false));
+          const all = await loadAllSources(false);
+          sources = all.sources;
+          failures = all.failures;
         }
 
         const results: ApiMatch[] = [];
@@ -156,13 +168,27 @@ export function registerSearchApi(server: McpServer): void {
           truncated,
           results,
         };
+        if (failures.length > 0) {
+          structured.failed = failures;
+        }
+
+        const failureNote =
+          failures.length > 0
+            ? [
+                "",
+                `> ⚠️ 搜索期间有 ${failures.length} 个源加载失败，结果可能不完整：`,
+                ...failures.map((f) => `> - ${f.url}: ${f.error}`),
+              ].join("\n")
+            : "";
 
         if (results.length === 0) {
           return {
             content: [
               {
                 type: "text" as const,
-                text: `未找到匹配 "${params.keyword}" 的接口${params.method ? `（方法: ${params.method}）` : ""}。\n\n提示：可用 swagger_list_sources 查看已配置的服务和模块。`,
+                text:
+                  `未找到匹配 "${params.keyword}" 的接口${params.method ? `（方法: ${params.method}）` : ""}。\n\n提示：可用 swagger_list_sources 查看已配置的服务和模块。` +
+                  failureNote,
               },
             ],
             structuredContent: structured,
@@ -188,7 +214,7 @@ export function registerSearchApi(server: McpServer): void {
           );
         }
 
-        let text = lines.join("\n");
+        let text = lines.join("\n") + failureNote;
         if (text.length > CHARACTER_LIMIT) {
           text =
             text.slice(0, CHARACTER_LIMIT) +
