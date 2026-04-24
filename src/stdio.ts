@@ -23,5 +23,5 @@ export async function startStdio(): Promise<void> {
       "Warning: SWAGGER_SOURCES env var not set. Tool calls will fail until it is provided."
     );
   }
-  console.error("Swagger MCP Server running via stdio");
+  console.error("Internal Swagger MCP Server running via stdio");
 }

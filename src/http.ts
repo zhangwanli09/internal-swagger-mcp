@@ -139,7 +139,7 @@ export async function startHttp({ port }: { port: number }): Promise<void> {
 
   app.listen(port, BIND_HOST, () => {
     const displayHost = BIND_HOST === "0.0.0.0" ? getLocalIP() : BIND_HOST;
-    console.error(`Swagger MCP Server (HTTP) listening on http://${displayHost}:${port}/mcp`);
+    console.error(`Internal Swagger MCP Server (HTTP) listening on http://${displayHost}:${port}/mcp`);
     console.error(`Health check: http://${displayHost}:${port}/health`);
     if (BIND_HOST === "0.0.0.0" && !BEARER_TOKEN && ALLOWED_ORIGINS.length === 0) {
       console.error(
