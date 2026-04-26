@@ -7,27 +7,27 @@ import type { InterfaceInfo, Module } from "../types.js";
 const SearchInputSchema = z.object({
   keyword: z
     .string()
-    .min(1, "关键词不能为空")
-    .describe("搜索关键词，匹配接口名称/描述/路径/模块名，支持中文"),
+    .min(1, "keyword must not be empty")
+    .describe("Search keyword. Matches interface name / description / path / module name. Chinese is supported."),
   method: z
     .enum(["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"])
     .optional()
-    .describe("过滤 HTTP 方法，不填则搜索所有方法"),
+    .describe("Filter by HTTP method. Omit to search all methods."),
   source: z
     .string()
     .optional()
-    .describe("只搜索指定服务名（来自 swagger_list_sources），不填则搜索全部服务"),
+    .describe("Restrict the search to a specific service name (from swagger_list_sources). Omit to search all services."),
   include_deprecated: z
     .boolean()
     .default(false)
-    .describe("是否包含已停用的接口，默认 false"),
+    .describe("Whether to include deprecated interfaces. Default false."),
   limit: z
     .number()
     .int()
     .min(1)
     .max(50)
     .default(20)
-    .describe("最多返回条数，默认 20，最大 50"),
+    .describe("Maximum number of results. Default 20, max 50."),
 }).strict();
 
 type SearchInput = z.infer<typeof SearchInputSchema>;
@@ -76,24 +76,24 @@ export function registerSearchApi(server: McpServer): void {
     "swagger_search_api",
     {
       title: "Search Swagger API",
-      description: `搜索内部 Swagger 文档中的 API 接口。
+      description: `Search API interfaces in the internal Swagger documentation.
 
-支持按关键词搜索接口名、描述、路径、模块名，可选过滤 HTTP 方法和服务范围。
+Searches by keyword across interface name, description, path, and module name. Optionally filter by HTTP method and service.
 
-参数说明:
-- keyword (必填): 搜索关键词，如 "登录"、"user"、"/api/order"
-- method (可选): HTTP 方法过滤，如 "GET"、"POST"
-- source (可选): 服务名过滤，来自 swagger_list_sources 的结果
-- include_deprecated (可选): 是否包含已停用接口，默认 false
-- limit (可选): 最多返回条数，默认 20
+Parameters:
+- keyword (required): Search keyword, e.g. "登录", "user", "/api/order". Chinese is supported.
+- method (optional): HTTP method filter, e.g. "GET", "POST".
+- source (optional): Service name filter, taken from swagger_list_sources results.
+- include_deprecated (optional): Whether to include deprecated interfaces. Default false.
+- limit (optional): Maximum number of results. Default 20.
 
-返回格式:
-每个匹配接口包含：服务名、模块名、HTTP 方法、完整路径、接口名称、描述、状态
+Response:
+Each matched interface includes: service name, module name, HTTP method, full path, interface name, description, status.
 
-使用示例:
-- 搜索登录接口: keyword="登录"
-- 搜索 POST 接口: keyword="用户", method="POST"
-- 在特定服务搜索: keyword="order", source="订单服务"`,
+Examples:
+- Search login interfaces: keyword="登录"
+- Search POST interfaces: keyword="用户", method="POST"
+- Search within a specific service: keyword="order", source="订单服务"`,
       inputSchema: SearchInputSchema,
       outputSchema: SearchApiOutput,
       annotations: {
@@ -112,13 +112,13 @@ export function registerSearchApi(server: McpServer): void {
           if (!result.source) {
             const hint =
               result.failures.length > 0
-                ? `当前 ${result.failures.length} 个源加载失败，目标可能在其中，请用 swagger_list_sources 查看失败详情。`
-                : "请用 swagger_list_sources 查看可用服务名。";
+                ? `${result.failures.length} source(s) failed to load and the target may be among them — call swagger_list_sources for failure details.`
+                : "Call swagger_list_sources to see available service names.";
             return {
               content: [
                 {
                   type: "text" as const,
-                  text: `Error: 未找到服务 "${params.source}"。${hint}`,
+                  text: `Error: service "${params.source}" not found. ${hint}`,
                 },
               ],
               isError: true,
@@ -187,7 +187,7 @@ export function registerSearchApi(server: McpServer): void {
               {
                 type: "text" as const,
                 text:
-                  `未找到匹配 "${params.keyword}" 的接口${params.method ? `（方法: ${params.method}）` : ""}。\n\n提示：可用 swagger_list_sources 查看已配置的服务和模块。` +
+                  `No interfaces matched "${params.keyword}"${params.method ? ` (method: ${params.method})` : ""}.\n\nHint: call swagger_list_sources to see the configured services and modules.` +
                   failureNote,
               },
             ],

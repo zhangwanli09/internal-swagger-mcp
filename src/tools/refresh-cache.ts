@@ -10,7 +10,7 @@ const RefreshInputSchema = z.object({
   source: z
     .string()
     .optional()
-    .describe("服务名，不填则刷新全部服务的缓存"),
+    .describe("Service name. Omit to refresh the cache for all services."),
 }).strict();
 
 type RefreshInput = z.infer<typeof RefreshInputSchema>;
@@ -41,14 +41,14 @@ export function registerRefreshCache(server: McpServer): void {
     "swagger_refresh_cache",
     {
       title: "Refresh Swagger Cache",
-      description: `强制重新拉取 Swagger 文档数据并更新缓存。
+      description: `Force-refetch Swagger documentation data and update the cache.
 
-当文档内容更新后（新增/修改接口），用此工具刷新缓存以获取最新数据。
+Use this after the documentation has been updated (interfaces added or modified) to fetch the latest data.
 
-参数说明:
-- source (可选): 服务名，不填则刷新全部服务
+Parameters:
+- source (optional): Service name. Omit to refresh all services.
 
-返回: 刷新结果，包括成功/失败状态和接口数量变化。`,
+Returns: Refresh results, including success/failure status and updated interface counts.`,
       inputSchema: RefreshInputSchema,
       outputSchema: RefreshCacheOutput,
       annotations: {
@@ -66,13 +66,13 @@ export function registerRefreshCache(server: McpServer): void {
           if (!src) {
             const hint =
               failures.length > 0
-                ? `当前 ${failures.length} 个源加载失败，目标可能在其中，请用 swagger_list_sources 查看失败详情。`
-                : "请用 swagger_list_sources 查看可用服务名。";
+                ? `${failures.length} source(s) failed to load and the target may be among them — call swagger_list_sources for failure details.`
+                : "Call swagger_list_sources to see available service names.";
             return {
               content: [
                 {
                   type: "text" as const,
-                  text: `Error: 未找到服务 "${params.source}"。${hint}`,
+                  text: `Error: service "${params.source}" not found. ${hint}`,
                 },
               ],
               isError: true,

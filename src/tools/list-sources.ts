@@ -28,15 +28,15 @@ export function registerListSources(server: McpServer): void {
     "swagger_list_sources",
     {
       title: "List Swagger Sources",
-      description: `列出所有已配置的 Swagger 文档源及其缓存状态。
+      description: `List all configured Swagger documentation sources and their cache status.
 
-返回每个服务的：
-- name: 服务名称（来自配置或自动从 projectName 读取）
-- fetchedAt: 最后缓存时间（null 表示尚未加载）
-- totalInterfaces: 接口总数（已加载时显示）
-- modules: 模块列表
+For each service, returns:
+- name: Service name (from config, or auto-read from projectName).
+- fetchedAt: Last cache time (null means not yet loaded).
+- totalInterfaces: Total interface count (shown when loaded).
+- modules: Module list.
 
-用途：在使用 swagger_search_api 之前，可先用此工具了解有哪些可用服务。`,
+Use this before calling swagger_search_api to discover which services are available.`,
       inputSchema: z.object({}).strict(),
       outputSchema: ListSourcesOutput,
       annotations: {

@@ -6,13 +6,13 @@ import type { InterfaceInfo, MockResultField, OutputResultItem, Param } from "..
 const GetDetailInputSchema = z.object({
   source: z
     .string()
-    .describe("服务名，来自 swagger_list_sources 或 swagger_search_api 结果"),
+    .describe("Service name, from swagger_list_sources or swagger_search_api results."),
   method: z
     .enum(["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"])
-    .describe("HTTP 方法"),
+    .describe("HTTP method."),
   path: z
     .string()
-    .describe("接口完整路径，如 /qmAuthorityCenter/systemFun/initPerformanceSolution"),
+    .describe("Full interface path, e.g. /qmAuthorityCenter/systemFun/initPerformanceSolution"),
 }).strict();
 
 type GetDetailInput = z.infer<typeof GetDetailInputSchema>;
@@ -236,20 +236,20 @@ export function registerGetApiDetail(server: McpServer): void {
     "swagger_get_api_detail",
     {
       title: "Get Swagger API Detail",
-      description: `获取单个 API 接口的完整详情，包括所有参数定义和响应示例。
+      description: `Get full details of a single API interface, including all parameter definitions and response examples.
 
-参数说明:
-- source (必填): 服务名，来自 swagger_list_sources 或 swagger_search_api 返回的 [服务名]
-- method (必填): HTTP 方法，如 "GET"、"POST"
-- path (必填): 接口完整路径，如 "/qmAuthorityCenter/systemFun/initPerformanceSolution"
+Parameters:
+- source (required): Service name, from the [service name] returned by swagger_list_sources or swagger_search_api.
+- method (required): HTTP method, e.g. "GET", "POST".
+- path (required): Full interface path, e.g. "/qmAuthorityCenter/systemFun/initPerformanceSolution".
 
-返回内容:
-- 接口基本信息（名称、描述、状态、Content-Type）
-- Query/Path/Header/Form/Body 各类参数的完整定义（参数名、类型、是否必填、描述）
-  必填列: "是"=必填, "否"=选填, "?"=平台元数据不明确（checkType=1 且无错误消息，建议对照后端代码或按选填处理）
-- 嵌套 Object 参数的子字段
-- 响应结果（Demo JSON + 输出字段表格）
-- Mock 响应字段表格`,
+Response includes:
+- Basic interface info (name, description, status, Content-Type).
+- Full definitions for Query / Path / Header / Form / Body parameters (name, type, required, description).
+  Required column: "是" = required, "否" = optional, "?" = platform metadata is ambiguous (checkType=1 with no error message — cross-check with backend code or treat as optional).
+- Sub-fields of nested Object parameters.
+- Response results (Demo JSON + output field table).
+- Mock response field table.`,
       inputSchema: GetDetailInputSchema,
       outputSchema: GetApiDetailOutput,
       annotations: {
@@ -265,13 +265,13 @@ export function registerGetApiDetail(server: McpServer): void {
         if (!source) {
           const hint =
             failures.length > 0
-              ? `当前 ${failures.length} 个源加载失败，目标可能在其中，请用 swagger_list_sources 查看失败详情。`
-              : "请用 swagger_list_sources 查看可用服务名。";
+              ? `${failures.length} source(s) failed to load and the target may be among them — call swagger_list_sources for failure details.`
+              : "Call swagger_list_sources to see available service names.";
           return {
             content: [
               {
                 type: "text" as const,
-                text: `Error: 未找到服务 "${params.source}"。${hint}`,
+                text: `Error: service "${params.source}" not found. ${hint}`,
               },
             ],
             isError: true,
@@ -308,7 +308,7 @@ export function registerGetApiDetail(server: McpServer): void {
             content: [
               {
                 type: "text" as const,
-                text: `Error: 未找到接口 ${params.method} ${params.path}（服务: ${params.source}）。\n\n提示：请用 swagger_search_api 先搜索接口，确认正确的路径和方法。`,
+                text: `Error: interface ${params.method} ${params.path} not found (service: ${params.source}).\n\nHint: call swagger_search_api first to confirm the correct path and method.`,
               },
             ],
             isError: true,
