@@ -1,4 +1,4 @@
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
 import { loadAllSources } from "../services/swagger-client.js";
 import { DEFAULT_CACHE_MINUTES } from "../constants.js";
@@ -12,7 +12,7 @@ const ListSourcesOutput = z.object({
       projectPath: z.string().optional(),
       status: z.string().optional(),
       totalInterfaces: z.number().int().optional(),
-      fetchedAt: z.string().datetime().optional(),
+      fetchedAt: z.iso.datetime().optional(),
       cacheValidMinutes: z.number().int().optional(),
       modules: z.array(z.string()).optional(),
       apiUrl: z.string().optional(),

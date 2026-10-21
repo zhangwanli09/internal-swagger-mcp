@@ -1,3 +1,8 @@
+import { createRequire } from "node:module";
+
+const require = createRequire(import.meta.url);
+export const { version: VERSION } = require("../package.json") as { version: string };
+
 export const CHARACTER_LIMIT = 25000;
 
 export const FIXED_HEADERS: Record<string, string> = {
