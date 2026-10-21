@@ -1,4 +1,4 @@
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
 import {
   clearCache,
@@ -20,7 +20,7 @@ const RefreshCacheOutput = z.object({
     z.object({
       name: z.string(),
       totalInterfaces: z.number().int(),
-      fetchedAt: z.string().datetime(),
+      fetchedAt: z.iso.datetime(),
     })
   ),
   failed: z

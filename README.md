@@ -4,6 +4,8 @@ Let AI agents query your internal Swagger platform's API docs via MCP.
 
 > This server talks to the internal Swagger management platform's private share endpoint (`/flow/swagger/share?uid=...`), not a public OpenAPI URL.
 
+Implements the [MCP 2026-07-28](https://modelcontextprotocol.io/specification/2026-07-28) specification, and keeps serving clients on 2025-era revisions (2025-11-25 and earlier) over both stdio and HTTP. The HTTP endpoint is fully stateless, so it can run behind a plain load balancer without sticky sessions.
+
 ## Tools
 
 | Tool | Purpose |
@@ -15,7 +17,7 @@ Let AI agents query your internal Swagger platform's API docs via MCP.
 
 ## Connecting MCP clients
 
-Requires Node.js ≥ 18. Swagger sources are always supplied by the client — this server holds no configuration. Pass them in stdio mode via the `SWAGGER_SOURCES` env var or [`--sources-file`](#sources-file), and in HTTP mode via the `X-Swagger-Sources` header per request. **Use project scope** for every client's MCP config so each repo pins its own sources and the config can be committed to git. In the snippets below, `<SOURCE>` looks like `http://your-server/...#/swaggerManage?uid=xxx`; if `swagger_list_sources` works inside the client, the integration is up.
+Requires Node.js ≥ 22. Swagger sources are always supplied by the client — this server holds no configuration. Pass them in stdio mode via the `SWAGGER_SOURCES` env var or [`--sources-file`](#sources-file), and in HTTP mode via the `X-Swagger-Sources` header per request. **Use project scope** for every client's MCP config so each repo pins its own sources and the config can be committed to git. In the snippets below, `<SOURCE>` looks like `http://your-server/...#/swaggerManage?uid=xxx`; if `swagger_list_sources` works inside the client, the integration is up.
 
 Start in HTTP mode (for deploying on a shared internal host):
 

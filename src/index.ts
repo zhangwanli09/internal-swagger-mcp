@@ -1,10 +1,7 @@
 #!/usr/bin/env node
-import { createRequire } from "node:module";
 import { startStdio } from "./stdio.js";
 import { startHttp } from "./http.js";
-
-const require = createRequire(import.meta.url);
-const { version: VERSION } = require("../package.json") as { version: string };
+import { VERSION } from "./constants.js";
 
 const HELP = `internal-swagger-mcp ${VERSION}
 
@@ -102,7 +99,7 @@ async function main(): Promise<void> {
   if (http) {
     await startHttp({ port });
   } else {
-    await startStdio({ sourcesFile });
+    startStdio({ sourcesFile });
   }
 }
 

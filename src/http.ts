@@ -1,12 +1,9 @@
 import { networkInterfaces } from "os";
 import { timingSafeEqual } from "crypto";
 import express, { type NextFunction, type Request, type Response } from "express";
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { registerListSources } from "./tools/list-sources.js";
-import { registerSearchApi } from "./tools/search-api.js";
-import { registerGetApiDetail } from "./tools/get-api-detail.js";
-import { registerRefreshCache } from "./tools/refresh-cache.js";
+import { createMcpHandler } from "@modelcontextprotocol/server";
+import { toNodeHandler } from "@modelcontextprotocol/node";
+import { createServer } from "./server.js";
 import { runWithSources } from "./services/source-context.js";
 
 export async function startHttp({ port }: { port: number }): Promise<void> {
@@ -17,11 +14,14 @@ export async function startHttp({ port }: { port: number }): Promise<void> {
   const BEARER_TOKEN = process.env.MCP_BEARER_TOKEN?.trim() || "";
   const BIND_HOST = process.env.MCP_BIND_HOST?.trim() || "0.0.0.0";
 
+  const onerror = (err: Error) => console.error("[mcp] request error:", err);
+  const mcpHandler = toNodeHandler(createMcpHandler(createServer, { onerror }), { onerror });
+
   const app = express();
   app.use(express.json());
 
-  app.post("/mcp", async (req, res, next) => {
-    try {
+  // Origin and bearer checks apply to every method on /mcp.
+  app.use("/mcp", (req, res, next) => {
     const origin = req.header("origin");
     const hasBearer = Boolean(req.header("authorization"));
     if (ALLOWED_ORIGINS.length > 0) {
@@ -55,13 +55,11 @@ export async function startHttp({ port }: { port: number }): Promise<void> {
       }
     }
 
-    const accept = req.header("accept") ?? "";
-    if (!accept.includes("application/json") || !accept.includes("text/event-stream")) {
-      console.error(
-        `[mcp] Accept header "${accept}" does not include required types (application/json, text/event-stream). Allowing for backward compatibility.`
-      );
-    }
+    next();
+  });
 
+  app.post("/mcp", async (req, res, next) => {
+    try {
     const headerVal = req.header("x-swagger-sources");
     if (!headerVal || !headerVal.trim()) {
       res.status(400).json({
@@ -84,42 +82,17 @@ export async function startHttp({ port }: { port: number }): Promise<void> {
       return;
     }
 
-    await runWithSources(sources, async () => {
-      const server = new McpServer({ name: "internal-swagger-mcp", version: "1.0.0" });
-      registerListSources(server);
-      registerSearchApi(server);
-      registerGetApiDetail(server);
-      registerRefreshCache(server);
-
-      const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
-
-      const cleanup = async () => {
-        try {
-          await transport.close();
-        } catch {
-          // ignore
-        }
-        try {
-          await server.close();
-        } catch {
-          // ignore
-        }
-      };
-      res.on("close", () => {
-        void cleanup();
-      });
-
-      try {
-        await server.connect(transport);
-        await transport.handleRequest(req, res, req.body);
-      } catch (err) {
-        await cleanup();
-        throw err;
-      }
-    });
+    // A fresh server instance is built per request; it serves both 2026-07-28
+    // (stateless) and 2025-era (initialize handshake) clients.
+    await runWithSources(sources, () => mcpHandler(req, res, req.body));
     } catch (err) {
       next(err);
     }
+  });
+
+  // Other methods carry no tool calls, so they need no sources; the SDK answers them.
+  app.all("/mcp", (req, res, next) => {
+    mcpHandler(req, res).catch(next);
   });
 
   app.get("/health", (_req, res) => {
