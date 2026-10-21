@@ -2,3 +2,4 @@ node_modules/
 dist/
 *.js.map
 .claude/*.local.json
+package-lock.json
