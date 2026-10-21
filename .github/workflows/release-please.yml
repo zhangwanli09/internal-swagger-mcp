@@ -11,7 +11,6 @@ permissions:
 
 concurrency:
   group: release-please
-  cancel-in-progress: false
 
 jobs:
   release-please:
@@ -24,7 +23,7 @@ jobs:
 
   publish:
     needs: release-please
-    if: ${{ needs.release-please.outputs.release_created == 'true' }}
+    if: needs.release-please.outputs.release_created == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
