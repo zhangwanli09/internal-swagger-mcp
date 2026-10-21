@@ -1,139 +1,65 @@
 # internal-swagger-mcp
 
-Let AI agents query your internal Swagger platform's API docs via MCP.
+[![npm](https://img.shields.io/npm/v/internal-swagger-mcp)](https://www.npmjs.com/package/internal-swagger-mcp)
+[![license](https://img.shields.io/npm/l/internal-swagger-mcp)](./LICENSE)
 
+English | [简体中文](./README.zh-CN.md)
+
+Let AI agents search and read your internal Swagger platform's API docs via MCP.
+
+> [!NOTE]
 > This server talks to the internal Swagger management platform's private share endpoint (`/flow/swagger/share?uid=...`), not a public OpenAPI URL.
 
-Implements the [MCP 2026-07-28](https://modelcontextprotocol.io/specification/2026-07-28) specification, and keeps serving clients on 2025-era revisions (2025-11-25 and earlier) over both stdio and HTTP. The HTTP endpoint is fully stateless, so it can run behind a plain load balancer without sticky sessions.
+Implements [MCP 2026-07-28](https://modelcontextprotocol.io/specification/2026-07-28) and still serves 2025-era clients, over both stdio and stateless HTTP (no sticky sessions needed). Requires Node.js ≥ 22.
 
 ## Tools
 
 | Tool | Purpose |
 |------|---------|
-| `swagger_list_sources` | List all configured services and their cache status |
-| `swagger_search_api` | Search APIs by keyword (filterable by method / service) |
-| `swagger_get_api_detail` | View an API's full parameters and mock example |
-| `swagger_refresh_cache` | Force-refresh the doc cache (default TTL is 30 minutes) |
+| `swagger_list_sources` | List configured services and their cache status |
+| `swagger_search_api` | Search APIs by keyword, optionally filtered by method / service |
+| `swagger_get_api_detail` | Show an API's full parameters and mock example |
+| `swagger_refresh_cache` | Force-refresh the doc cache (default TTL: 30 minutes) |
+
+## Sources
+
+The server holds no configuration; each client supplies a list of Swagger share links (`<SOURCE>` below), which look like `http://your-server/...#/swaggerManage?uid=xxx`.
+
+For local (stdio) mode, put them in `swagger-sources.json` at the project root and commit it:
+
+```json
+["<SOURCE_1>", "<SOURCE_2>"]
+```
+
+The path resolves against the working directory (the project root under project-scoped configs), and the file is re-read on every tool call. Alternatively, drop `--sources-file` from the configs below and set the `SWAGGER_SOURCES` env var to the same JSON array.
+
+For remote (HTTP) mode, sources go in the `X-Swagger-Sources` header of each request.
 
 ## Connecting MCP clients
 
-Requires Node.js ≥ 22. Swagger sources are always supplied by the client — this server holds no configuration. Pass them in stdio mode via the `SWAGGER_SOURCES` env var or [`--sources-file`](#sources-file), and in HTTP mode via the `X-Swagger-Sources` header per request. **Use project scope** for every client's MCP config so each repo pins its own sources and the config can be committed to git. In the snippets below, `<SOURCE>` looks like `http://your-server/...#/swaggerManage?uid=xxx`; if `swagger_list_sources` works inside the client, the integration is up.
+Use **project scope** so each repo pins its own sources. Once connected, `swagger_list_sources` should list your services.
 
-Start in HTTP mode (for deploying on a shared internal host):
+For remote mode, start the server on a shared host first (see [Security](#http-deployment-security)):
 
 ```bash
-npx -y internal-swagger-mcp --http   # defaults to port 3000; override with --port or PORT
+npx -y internal-swagger-mcp --http   # port 3000; override with --port or PORT
 ```
 
 ### Claude Code
 
-[Official docs](https://code.claude.com/docs/en/mcp) — using `--scope project` writes to the project root's `.mcp.json`.
-
-Local (stdio):
+[Docs](https://code.claude.com/docs/en/mcp) — writes to `.mcp.json`.
 
 ```bash
-claude mcp add swagger --scope project --env SWAGGER_SOURCES='["<SOURCE>"]' -- npx -y internal-swagger-mcp
-```
+# Local
+claude mcp add swagger --scope project -- npx -y internal-swagger-mcp --sources-file ./swagger-sources.json
 
-Remote (HTTP):
-
-```bash
+# Remote
 claude mcp add --transport http swagger --scope project http://<internal-IP>:3000/mcp --header 'X-Swagger-Sources: ["<SOURCE>"]'
 ```
 
 ### opencode
 
-[Official docs](https://opencode.ai/docs/mcp-servers) — place this in `opencode.json` at the project root.
-
-Local (stdio):
-
-```json
-{
-  "mcp": {
-    "swagger": {
-      "type": "local",
-      "command": ["npx", "-y", "internal-swagger-mcp"],
-      "environment": {
-        "SWAGGER_SOURCES": "[\"<SOURCE>\"]"
-      }
-    }
-  }
-}
-```
-
-Remote (HTTP):
-
-```json
-{
-  "mcp": {
-    "swagger": {
-      "type": "remote",
-      "url": "http://<internal-IP>:3000/mcp",
-      "headers": {
-        "X-Swagger-Sources": "[\"<SOURCE>\"]"
-      }
-    }
-  }
-}
-```
-
-### Cursor
-
-[Official docs](https://cursor.com/docs/context/mcp) — place this in `.cursor/mcp.json` at the project root.
-
-Local (stdio):
-
-```json
-{
-  "mcpServers": {
-    "swagger": {
-      "command": "npx",
-      "args": ["-y", "internal-swagger-mcp"],
-      "env": {
-        "SWAGGER_SOURCES": "[\"<SOURCE>\"]"
-      }
-    }
-  }
-}
-```
-
-Remote (HTTP):
-
-```json
-{
-  "mcpServers": {
-    "swagger": {
-      "url": "http://<internal-IP>:3000/mcp",
-      "headers": {
-        "X-Swagger-Sources": "[\"<SOURCE>\"]"
-      }
-    }
-  }
-}
-```
-
-### Sources file
-
-When the source list belongs to the project, pass `--sources-file <path>` instead of pasting the same JSON-as-string into every client's `env`. Use a path relative to the project root (e.g. `./swagger-sources.json`) — it resolves from `process.cwd()`, which is the project root under project-scoped configs in Claude Code, Cursor, opencode, etc. — so the MCP config can be committed and shared as-is.
-
-`swagger-sources.json` (each entry is a `<SOURCE>` URL as defined above):
-
-```json
-[
-  "<SOURCE_1>",
-  "<SOURCE_2>"
-]
-```
-
-Each client config then becomes a thin wrapper around the same command:
-
-Claude Code:
-
-```bash
-claude mcp add swagger --scope project -- npx -y internal-swagger-mcp --sources-file ./swagger-sources.json
-```
-
-opencode (`opencode.json`):
+[Docs](https://opencode.ai/docs/mcp-servers) — `opencode.json`. For remote, use `"type": "remote"` with `url` and `headers`.
 
 ```json
 {
@@ -146,7 +72,9 @@ opencode (`opencode.json`):
 }
 ```
 
-Cursor (`.cursor/mcp.json`) — and other clients using the `mcpServers` shape:
+### Cursor and other `mcpServers` clients
+
+[Docs](https://cursor.com/docs/context/mcp) — `.cursor/mcp.json`.
 
 ```json
 {
@@ -159,16 +87,18 @@ Cursor (`.cursor/mcp.json`) — and other clients using the `mcpServers` shape:
 }
 ```
 
-The file is read once at startup; the source list is fixed for the server's lifetime (clients relaunch on config change anyway). When both `--sources-file` and `SWAGGER_SOURCES` are provided, the file wins. The flag is rejected in `--http` mode because HTTP sources are inherently per-request.
+Remote: replace the entry with `{ "url": "http://<internal-IP>:3000/mcp", "headers": { "X-Swagger-Sources": "[\"<SOURCE>\"]" } }`.
 
 ## HTTP deployment security
 
-The server binds to `0.0.0.0` by default for easy intranet sharing, and prints a warning if started bare. In production, set at least one of the following:
+The server binds to `0.0.0.0` by default and warns at startup if none of these is set:
 
 | Environment variable | Effect |
 |------|--------|
-| `MCP_BIND_HOST` | Bind address; set to `127.0.0.1` to restrict access to the local host (default `0.0.0.0`) |
-| `MCP_BEARER_TOKEN` | Require an `Authorization: Bearer <token>` header on every request |
-| `MCP_ALLOWED_ORIGINS` | Comma-separated Origin allowlist (DNS-rebinding protection) |
+| `MCP_BIND_HOST` | Bind address, e.g. `127.0.0.1` for local-only |
+| `MCP_BEARER_TOKEN` | Require `Authorization: Bearer <token>` (add it to the client's headers) |
+| `MCP_ALLOWED_ORIGINS` | Comma-separated Origin allowlist; requests without `Origin` then need a valid bearer token |
 
-> When `MCP_ALLOWED_ORIGINS` is set, requests without an `Origin` header are rejected — except for requests carrying a valid `MCP_BEARER_TOKEN`, so server-to-server calls still work.
+## License
+
+[MIT](./LICENSE)
