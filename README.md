@@ -57,6 +57,33 @@ claude mcp add swagger --scope project -- npx -y internal-swagger-mcp --sources-
 claude mcp add --transport http swagger --scope project "http://<internal-IP>:3000/mcp" --header 'X-Swagger-Sources: ["<SOURCE>"]'
 ```
 
+### Codex
+
+Add one of the following configurations to `.codex/config.toml` in your project root. Codex loads this file for trusted projects. See the [Codex MCP docs](https://developers.openai.com/codex/mcp).
+
+**Local (stdio)**
+
+Replace `/absolute/path/to/swagger-sources.json` with the path to your project's sources file.
+
+```toml
+[mcp_servers.swagger]
+command = "npx"
+args = ["-y", "internal-swagger-mcp", "--sources-file", "/absolute/path/to/swagger-sources.json"]
+```
+
+**Remote (Streamable HTTP)**
+
+Replace `<mcp-host>` and `<SOURCE>` with your MCP endpoint's hostname and Swagger share link. If the server requires a bearer token, you must use an `https://` endpoint. For example, you can put a TLS-terminating reverse proxy in front of the HTTP server. Then uncomment `bearer_token_env_var` and set `SWAGGER_MCP_TOKEN` in the environment that launches Codex.
+
+```toml
+[mcp_servers.swagger]
+url = "https://<mcp-host>/mcp"
+http_headers = { "X-Swagger-Sources" = '["<SOURCE>"]' }
+# bearer_token_env_var = "SWAGGER_MCP_TOKEN"
+```
+
+Start a new Codex session, use `/mcp` to check that `swagger` is connected, then ask Codex to run `swagger_list_sources`.
+
 ### OpenCode
 
 In `opencode.json`, OpenCode v2 uses `mcp.servers.swagger` as shown below. For v1, put `swagger` directly under `mcp`. For remote mode, replace the local entry with `"type": "remote"`, `url`, and `headers`. See the [OpenCode docs](https://opencode.ai/docs/mcp-servers).

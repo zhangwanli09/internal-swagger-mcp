@@ -57,6 +57,33 @@ claude mcp add swagger --scope project -- npx -y internal-swagger-mcp --sources-
 claude mcp add --transport http swagger --scope project "http://<内网IP>:3000/mcp" --header 'X-Swagger-Sources: ["<SOURCE>"]'
 ```
 
+### Codex
+
+将以下任一配置写入项目根目录的 `.codex/config.toml`。Codex 仅在项目受信任时加载该文件。参见 [Codex MCP 文档](https://developers.openai.com/codex/mcp)。
+
+**本地（stdio）**
+
+将 `/absolute/path/to/swagger-sources.json` 替换为项目中 `swagger-sources.json` 的绝对路径。
+
+```toml
+[mcp_servers.swagger]
+command = "npx"
+args = ["-y", "internal-swagger-mcp", "--sources-file", "/absolute/path/to/swagger-sources.json"]
+```
+
+**远程（Streamable HTTP）**
+
+将 `<mcp-host>` 和 `<SOURCE>` 分别替换为 MCP 端点的主机名和 Swagger 分享链接。如果服务端要求 Bearer Token，必须使用 `https://` 端点。比如，可以在 HTTP 服务前部署一个负责处理 TLS 的反向代理。然后取消 `bearer_token_env_var` 的注释，并在启动 Codex 的环境中设置 `SWAGGER_MCP_TOKEN`。
+
+```toml
+[mcp_servers.swagger]
+url = "https://<mcp-host>/mcp"
+http_headers = { "X-Swagger-Sources" = '["<SOURCE>"]' }
+# bearer_token_env_var = "SWAGGER_MCP_TOKEN"
+```
+
+启动新的 Codex 会话，使用 `/mcp` 确认 `swagger` 已连接，然后让 Codex 调用 `swagger_list_sources`。
+
 ### OpenCode
 
 在 `opencode.json` 中，OpenCode v2 按下例使用 `mcp.servers.swagger`。v1 则将 `swagger` 直接放在 `mcp` 下。远程模式使用 `"type": "remote"`、`url` 和 `headers` 替换本地条目。参见 [OpenCode 文档](https://opencode.ai/docs/mcp-servers)。
