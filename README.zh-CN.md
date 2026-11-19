@@ -31,9 +31,9 @@
 ["<SOURCE_1>", "<SOURCE_2>"]
 ```
 
-路径相对于工作目录解析（项目级配置下即项目根目录），每次调用工具都会重新读取该文件。也可以去掉下文配置中的 `--sources-file`，改为把同样的 JSON 数组设置到环境变量 `SWAGGER_SOURCES`。
+`--sources-file` 的相对路径以 MCP 服务进程的工作目录为准。下文的相对路径适用于客户端从项目根目录启动服务的情况。如果客户端从其他目录启动服务，请使用绝对路径。每次调用工具都会重新读取该文件。也可以省略 `--sources-file`，将同样的 JSON 数组设置到服务进程的环境变量 `SWAGGER_SOURCES`。
 
-远程（HTTP）模式下，来源通过每个请求的 `X-Swagger-Sources` 请求头传入。
+远程（HTTP）模式下，每次 `POST /mcp` 都要通过 `X-Swagger-Sources` 请求头传入该 JSON 数组，包括旧版客户端的 `initialize` 请求。
 
 ## 接入 MCP 客户端
 
@@ -47,26 +47,28 @@ npx -y internal-swagger-mcp --http   # 默认端口 3000，可用 --port 或 POR
 
 ### Claude Code
 
-[文档](https://code.claude.com/docs/en/mcp) — 写入 `.mcp.json`。
+`--scope project` 会写入 `.mcp.json`。请将 `<内网IP>` 和 `<SOURCE>` 替换成实际的服务地址和 Swagger 分享链接。参见 [Claude Code 文档](https://code.claude.com/docs/en/mcp)。
 
 ```bash
 # 本地
 claude mcp add swagger --scope project -- npx -y internal-swagger-mcp --sources-file ./swagger-sources.json
 
 # 远程
-claude mcp add --transport http swagger --scope project http://<内网IP>:3000/mcp --header 'X-Swagger-Sources: ["<SOURCE>"]'
+claude mcp add --transport http swagger --scope project "http://<内网IP>:3000/mcp" --header 'X-Swagger-Sources: ["<SOURCE>"]'
 ```
 
-### opencode
+### OpenCode
 
-[文档](https://opencode.ai/docs/mcp-servers) — `opencode.json`。远程模式改用 `"type": "remote"`，并配置 `url` 和 `headers`。
+在 `opencode.json` 中，OpenCode v2 按下例使用 `mcp.servers.swagger`。v1 则将 `swagger` 直接放在 `mcp` 下。远程模式使用 `"type": "remote"`、`url` 和 `headers` 替换本地条目。参见 [OpenCode 文档](https://opencode.ai/docs/mcp-servers)。
 
 ```json
 {
   "mcp": {
-    "swagger": {
-      "type": "local",
-      "command": ["npx", "-y", "internal-swagger-mcp", "--sources-file", "./swagger-sources.json"]
+    "servers": {
+      "swagger": {
+        "type": "local",
+        "command": ["npx", "-y", "internal-swagger-mcp", "--sources-file", "./swagger-sources.json"]
+      }
     }
   }
 }
@@ -74,14 +76,14 @@ claude mcp add --transport http swagger --scope project http://<内网IP>:3000/m
 
 ### Cursor 及其他 `mcpServers` 格式的客户端
 
-[文档](https://cursor.com/docs/context/mcp) — `.cursor/mcp.json`。
+Cursor 中将以下配置写入 `.cursor/mcp.json`。其他使用 `mcpServers` 格式的客户端如果不支持 Cursor 的 `${workspaceFolder}` 变量，请使用绝对路径。参见 [Cursor 文档](https://cursor.com/docs/mcp)。
 
 ```json
 {
   "mcpServers": {
     "swagger": {
       "command": "npx",
-      "args": ["-y", "internal-swagger-mcp", "--sources-file", "./swagger-sources.json"]
+      "args": ["-y", "internal-swagger-mcp", "--sources-file", "${workspaceFolder}/swagger-sources.json"]
     }
   }
 }
@@ -91,13 +93,13 @@ claude mcp add --transport http swagger --scope project http://<内网IP>:3000/m
 
 ## HTTP 部署安全
 
-服务默认绑定 `0.0.0.0`，若以下变量均未设置，启动时会输出警告：
+服务默认绑定 `0.0.0.0`。绑定到 `0.0.0.0` 且 Bearer token 和 Origin 白名单均为空时，服务会在启动时输出警告。
 
 | 环境变量 | 作用 |
 |------|------|
 | `MCP_BIND_HOST` | 绑定地址，如设为 `127.0.0.1` 则仅允许本机访问 |
-| `MCP_BEARER_TOKEN` | 要求请求携带 `Authorization: Bearer <token>`（需同时加到客户端的 headers 中） |
-| `MCP_ALLOWED_ORIGINS` | 逗号分隔的 Origin 白名单；启用后，不带 `Origin` 的请求必须携带有效的 Bearer token |
+| `MCP_BEARER_TOKEN` | 要求所有 `/mcp` 请求携带 `Authorization: Bearer <token>`（需同时加到客户端的 headers 中） |
+| `MCP_ALLOWED_ORIGINS` | 逗号分隔的 Origin 白名单，适用于 `/mcp`。启用白名单后，不发送 `Origin` 的客户端必须使用服务端已配置的 Bearer token 认证。若同时设置两个变量，所有客户端都必须提供 token。 |
 
 ## 许可证
 
