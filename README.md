@@ -31,9 +31,9 @@ For local (stdio) mode, put them in `swagger-sources.json` at the project root a
 ["<SOURCE_1>", "<SOURCE_2>"]
 ```
 
-The path resolves against the working directory (the project root under project-scoped configs), and the file is re-read on every tool call. Alternatively, drop `--sources-file` from the configs below and set the `SWAGGER_SOURCES` env var to the same JSON array.
+A relative `--sources-file` path resolves against the MCP server process's working directory. The relative paths below assume the client starts the server from the project root. Use an absolute path if your client starts it elsewhere. The server re-reads the file on every tool call. You can also omit `--sources-file` and set `SWAGGER_SOURCES` in the server process's environment to the same JSON array.
 
-For remote (HTTP) mode, sources go in the `X-Swagger-Sources` header of each request.
+For remote (HTTP) mode, send the JSON array in the `X-Swagger-Sources` header on every `POST /mcp`, including legacy clients' `initialize` requests.
 
 ## Connecting MCP clients
 
@@ -47,26 +47,28 @@ npx -y internal-swagger-mcp --http   # port 3000; override with --port or PORT
 
 ### Claude Code
 
-[Docs](https://code.claude.com/docs/en/mcp) — writes to `.mcp.json`.
+`--scope project` writes to `.mcp.json`. Replace `<internal-IP>` and `<SOURCE>` with your server address and Swagger share link. See the [Claude Code docs](https://code.claude.com/docs/en/mcp).
 
 ```bash
 # Local
 claude mcp add swagger --scope project -- npx -y internal-swagger-mcp --sources-file ./swagger-sources.json
 
 # Remote
-claude mcp add --transport http swagger --scope project http://<internal-IP>:3000/mcp --header 'X-Swagger-Sources: ["<SOURCE>"]'
+claude mcp add --transport http swagger --scope project "http://<internal-IP>:3000/mcp" --header 'X-Swagger-Sources: ["<SOURCE>"]'
 ```
 
-### opencode
+### OpenCode
 
-[Docs](https://opencode.ai/docs/mcp-servers) — `opencode.json`. For remote, use `"type": "remote"` with `url` and `headers`.
+In `opencode.json`, OpenCode v2 uses `mcp.servers.swagger` as shown below. For v1, put `swagger` directly under `mcp`. For remote mode, replace the local entry with `"type": "remote"`, `url`, and `headers`. See the [OpenCode docs](https://opencode.ai/docs/mcp-servers).
 
 ```json
 {
   "mcp": {
-    "swagger": {
-      "type": "local",
-      "command": ["npx", "-y", "internal-swagger-mcp", "--sources-file", "./swagger-sources.json"]
+    "servers": {
+      "swagger": {
+        "type": "local",
+        "command": ["npx", "-y", "internal-swagger-mcp", "--sources-file", "./swagger-sources.json"]
+      }
     }
   }
 }
@@ -74,14 +76,14 @@ claude mcp add --transport http swagger --scope project http://<internal-IP>:300
 
 ### Cursor and other `mcpServers` clients
 
-[Docs](https://cursor.com/docs/context/mcp) — `.cursor/mcp.json`.
+In Cursor, put this in `.cursor/mcp.json`. For other clients using `mcpServers`, use an absolute path if they lack Cursor's `${workspaceFolder}` variable. See the [Cursor docs](https://cursor.com/docs/mcp).
 
 ```json
 {
   "mcpServers": {
     "swagger": {
       "command": "npx",
-      "args": ["-y", "internal-swagger-mcp", "--sources-file", "./swagger-sources.json"]
+      "args": ["-y", "internal-swagger-mcp", "--sources-file", "${workspaceFolder}/swagger-sources.json"]
     }
   }
 }
@@ -91,13 +93,13 @@ Remote: replace the entry with `{ "url": "http://<internal-IP>:3000/mcp", "heade
 
 ## HTTP deployment security
 
-The server binds to `0.0.0.0` by default and warns at startup if none of these is set:
+The server binds to `0.0.0.0` by default. It warns at startup when it binds to `0.0.0.0` and both the bearer token and Origin allowlist are empty.
 
 | Environment variable | Effect |
 |------|--------|
 | `MCP_BIND_HOST` | Bind address, e.g. `127.0.0.1` for local-only |
-| `MCP_BEARER_TOKEN` | Require `Authorization: Bearer <token>` (add it to the client's headers) |
-| `MCP_ALLOWED_ORIGINS` | Comma-separated Origin allowlist; requests without `Origin` then need a valid bearer token |
+| `MCP_BEARER_TOKEN` | Require `Authorization: Bearer <token>` on all `/mcp` requests (add it to the client's headers) |
+| `MCP_ALLOWED_ORIGINS` | Comma-separated Origin allowlist for `/mcp`. With the allowlist enabled, clients that omit `Origin` must authenticate with a configured bearer token. If you set both variables, every client needs the token. |
 
 ## License
 
