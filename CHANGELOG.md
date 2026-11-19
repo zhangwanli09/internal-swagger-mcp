@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.1.1](https://github.com/zhangwanli09/internal-swagger-mcp/compare/v2.1.0...v2.1.1) (2026-11-19)
+
+
+### Documentation
+
+* add Codex MCP setup instructions ([049cc44](https://github.com/zhangwanli09/internal-swagger-mcp/commit/049cc4443e34ff02616f31c5c6b0878421b7b69d))
+* correct MCP client setup and HTTP guidance ([#13](https://github.com/zhangwanli09/internal-swagger-mcp/issues/13)) ([7326475](https://github.com/zhangwanli09/internal-swagger-mcp/commit/73264757639607af698755a15ba2b393c266cb94))
+
 ## [2.1.0](https://github.com/zhangwanli09/internal-swagger-mcp/compare/v2.0.0...v2.1.0) (2026-10-21)
 
 
